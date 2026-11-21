@@ -1,0 +1,26 @@
+REQUIRED OPERATING CONTRACT - NO FIRMWARE CHANGES INCLUDED
+
+GPIO11 drives the existing MMBT2222A piezo stage. Generate firmware-controlled
+chirps near the CPT-9019S-SMT-TR rated4kHz frequency; a steady HIGH is not a
+tone for this externally driven piezo. Default GPIO11 LOW during boot/reset.
+
+GPIO10 controls lock1; GPIO3 controls lock2. Active high.
+350ms existing pulse behavior retained. Both outputs default OFF.
+
+User requires never activating both outputs together. Firmware must implement
+a single shared lock arbiter, not independent timers that can overlap. Serialize
+or reject a competing request; avoid races between network/button/retry paths.
+Set both output latches LOW before enabling output mode. Do not allow unlock
+requests until initialization is complete. Clear both on cancellation/errors;
+verify watchdog and reset behavior on hardware.
+
+Bound each pulse to350ms under fault/error paths. Determine maximum repetition
+from coil/fuse/diode heating. Account for flyback decay: both MOSFET gates LOW
+does not mean coil current instantly becomes zero. A measured dead interval may
+be needed before energizing the other channel if 'never together' means no
+overlap in actual coil current, rather than no overlap in commanded outputs.
+
+This hardware has independent gate pull-downs but no mutual-exclusion logic
+or independent supply-fault gate inhibit. The3A fuse is not an interlock.
+Verify both gates with a scope during power ramps, unplugging, brownouts,
+BOOT/RESET and watchdog recovery before closing the default-OFF requirement.

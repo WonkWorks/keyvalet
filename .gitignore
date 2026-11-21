@@ -1,0 +1,45 @@
+# Original firmware and device backups
+/backups/
+
+# ESP-IDF and CMake build output
+/build/
+/build-*/
+/tests/nvs_replay_stress/build-*/
+/tests/nvs_replay_stress/sdkconfig
+/tests/nvs_replay_stress/sdkconfig.old
+/compile_commands.json
+/*.elf
+/*.map
+/*.bin
+/*.uf2
+/managed_components/
+/.ccache/
+
+# Machine-local ESP-IDF configuration
+/sdkconfig
+/sdkconfig.old
+/sdkconfig.local
+/sdkconfig.*.local
+/sdkconfig.*.local.old
+
+# Private credentials, device secrets, and firmware signing keys
+/.env
+/.env.*
+!/.env.example
+/main/wifi_credentials.local.h
+/main/enrollment_root.local.h
+/main/replay_recovery.local.h
+/secrets/
+/credentials/
+/keys/
+/signing-keys/
+
+# Local editor and operating-system artifacts
+/.vscode/
+*.swp
+*~
+.DS_Store
+
+# Python tooling output
+__pycache__/
+*.py[cod]

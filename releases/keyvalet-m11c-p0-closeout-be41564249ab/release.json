@@ -1,0 +1,160 @@
+{
+  "browser_qualification": "required; no browser/hardware flashing performed for P0",
+  "build_id": "f7eaa18daedb-dirty-production-01ab67178a2f3b441895353f08818f3b252dad222197c6e27d8062a8aee760d1",
+  "chip": "esp32c6",
+  "elf_sha256": "01ab67178a2f3b441895353f08818f3b252dad222197c6e27d8062a8aee760d1",
+  "esp_idf_version": "v5.5.5",
+  "esptool_version": "4.12.0",
+  "factory_image_is_destructive": true,
+  "factory_installation": "virgin-only; destructive on an installed device; not upgrade or recovery",
+  "factory_parts": [
+    {
+      "offset": 0,
+      "path": "bootloader.bin"
+    },
+    {
+      "offset": 32768,
+      "path": "partition-table.bin"
+    },
+    {
+      "offset": 53248,
+      "path": "ota-data-initial.bin"
+    },
+    {
+      "offset": 65536,
+      "path": "keyvalet-app.bin"
+    }
+  ],
+  "files": {
+    "bootloader.bin": {
+      "bytes": 22176,
+      "sha256": "1865d77fe7c2d6c989b815d6211f2af3fff2c7f5559ae2caced24b44dd221f5f"
+    },
+    "keyvalet-app.bin": {
+      "bytes": 1134304,
+      "sha256": "52a230412760157ffcea5b1f6bc91d44fef624e545dc00263070cbdac16b69df"
+    },
+    "keyvalet-factory.bin": {
+      "bytes": 1199840,
+      "sha256": "b1afc1f8d1d2fce4be37b80d200d6447585c493160fe7f2867300414b8be29ae"
+    },
+    "manifest.factory.json": {
+      "bytes": 413,
+      "sha256": "c046928ae51810570ac793734d1623b6151873896f04b792b677fb2c035c64d2"
+    },
+    "manifest.replace.json": {
+      "bytes": 512,
+      "sha256": "8cf150bcb84202c71f086e70c7c5f70efd9327a0dd46e4c1c78d676cf542431f"
+    },
+    "ota-data-initial.bin": {
+      "bytes": 8192,
+      "sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f"
+    },
+    "partition-table.bin": {
+      "bytes": 3072,
+      "sha256": "ad5968bd80275039f52efe875ee6ce7d765ab27b74b79bae8406de9383c5dfad"
+    }
+  },
+  "firmware_version": "0.5.0-m5",
+  "flash_bytes": 8388608,
+  "flash_frequency_mhz": 80,
+  "flash_mode": "dio",
+  "git_revision": "be41564249abb3e410a2db4d57d31e7b64dd5724",
+  "hardware": "keyvalet-v0.4.2",
+  "initial_production_enrollment": "protected-usb-public-key-staging-button-and-enroll-v1-proof",
+  "module": "ESP32-C6-WROOM-1-N8",
+  "ota_slot_bytes": 2621440,
+  "ota_slot_headroom_bytes": 1487136,
+  "partitions": [
+    {
+      "bytes": 16384,
+      "name": "nvs",
+      "offset": 36864,
+      "subtype": 2,
+      "type": 1
+    },
+    {
+      "bytes": 8192,
+      "name": "otadata",
+      "offset": 53248,
+      "subtype": 0,
+      "type": 1
+    },
+    {
+      "bytes": 4096,
+      "name": "phy_init",
+      "offset": 61440,
+      "subtype": 1,
+      "type": 1
+    },
+    {
+      "bytes": 2621440,
+      "name": "ota_0",
+      "offset": 65536,
+      "subtype": 16,
+      "type": 0
+    },
+    {
+      "bytes": 2621440,
+      "name": "ota_1",
+      "offset": 2686976,
+      "subtype": 17,
+      "type": 0
+    },
+    {
+      "bytes": 2621440,
+      "name": "journal",
+      "offset": 5308416,
+      "subtype": 64,
+      "type": 1
+    },
+    {
+      "bytes": 65536,
+      "name": "replay_nvs",
+      "offset": 7929856,
+      "subtype": 2,
+      "type": 1
+    },
+    {
+      "bytes": 65536,
+      "name": "tls_nvs",
+      "offset": 7995392,
+      "subtype": 2,
+      "type": 1
+    }
+  ],
+  "product": "KeyValet",
+  "provenance": {
+    "accepted_source_checkpoint": "be41564249abb3e410a2db4d57d31e7b64dd5724",
+    "application_equivalence": "All six loaded segments identical except descriptor time and ELF SHA-256; image integrity verified independently.",
+    "embedded_build_git_revision": "f7eaa18daedb1c2ae098b900af7f39cdea07eacb",
+    "embedded_build_prefix": "f7eaa18daedb-dirty-production",
+    "physical_acceptance": "Repair application accepted; closeout application/factory package require separate flashing qualification.",
+    "physically_accepted_application_sha256": "97de381156fb6dc7294f64a12e28546c095e94e2fa27b5d87f47f9c4d12be1d2",
+    "preserved_inputs_sha256": {
+      "bootloader/bootloader.bin": "1865d77fe7c2d6c989b815d6211f2af3fff2c7f5559ae2caced24b44dd221f5f",
+      "config/sdkconfig.json": "efc6c5d33429f51d9d679e8cfe6ede19bfa09ff969720ee1e0acc72c63b1e562",
+      "esp-idf/main/keyvalet_build_identity.h": "668ac6151747486c91d88c98ddb3423c4a16c876dd1bfdcf03e1b1e1a26e46d5",
+      "flasher_args.json": "9ee8be5fd935accfc787fc2ef399d8d4dd9e849188eb24e81f9ac6653790c9cb",
+      "keyvalet.bin": "52a230412760157ffcea5b1f6bc91d44fef624e545dc00263070cbdac16b69df",
+      "keyvalet.elf": "01ab67178a2f3b441895353f08818f3b252dad222197c6e27d8062a8aee760d1",
+      "ota_data_initial.bin": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f",
+      "partition_table/partition-table.bin": "ad5968bd80275039f52efe875ee6ce7d765ab27b74b79bae8406de9383c5dfad",
+      "project_description.json": "ae00f9010b331e9fab924d3d2208df64706e583589f6a7b2f4b0d64465065229"
+    }
+  },
+  "release_id": "keyvalet-m11c-p0-closeout-be41564249ab",
+  "replacement_parts": [
+    {
+      "offset": 65536,
+      "path": "keyvalet-app.bin"
+    },
+    {
+      "offset": 2686976,
+      "path": "keyvalet-app.bin"
+    }
+  ],
+  "replacement_preserves_otadata": true,
+  "schema": "keyvalet-release-v1",
+  "variant": "production"
+}

@@ -1,0 +1,23 @@
+{
+  "builds": [
+    {
+      "chipFamily": "ESP32-C6",
+      "parts": [
+        {
+          "offset": 65536,
+          "path": "keyvalet-app.bin"
+        },
+        {
+          "offset": 2686976,
+          "path": "keyvalet-app.bin"
+        }
+      ]
+    }
+  ],
+  "keyvalet_installation": "compatible-app-replacement-only",
+  "keyvalet_release_id": "keyvalet-m11c-p0-closeout-be41564249ab",
+  "name": "KeyValet",
+  "new_install_improv_wait_time": 10,
+  "new_install_prompt_erase": true,
+  "version": "0.5.0-m5"
+}

@@ -1,0 +1,117 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>KeyValet Acceptance Console</title>
+<style>
+body{font:16px system-ui;max-width:900px;margin:2rem auto;padding:0 1rem}button,input{font:inherit;margin:.25rem}pre{background:#111;color:#ddd;padding:1rem;min-height:12rem;overflow:auto}.row{margin:.75rem 0}label{display:inline-block;min-width:13rem}
+</style>
+<h1>KeyValet Acceptance Console — Milestone 7 Pass 3</h1>
+<p>Development-only console. Signing keys remain in the localhost helper, never this page.</p>
+<p>First enrollment: stage the helper's operational <strong>public</strong> key using
+CONTROL over protected USB, hold the physical button for five seconds, then use
+Begin enrollment below within five minutes of staging. USB staging is temporary;
+the WebSocket proof and physical window are both required. Existing trust cannot be replaced.</p>
+<div class="row"><label>KeyValet TLS hostname</label><input id="ip" placeholder="Commissioned hostname"><button id="connect">Connect</button><button id="disconnect">Disconnect</button></div>
+<div class="row"><button id="enroll">Begin enrollment</button><button id="readConfig">Read settings</button></div>
+<fieldset><legend>Signed targeted unlock</legend>
+<label>Lock target</label><select id="lock"><option value="lock_1">Lock 1</option><option value="lock_2">Lock 2</option></select><br>
+<label>Door-open timeout (optional)</label><input id="unlockTimeout" type="number" min="0" max="3600" placeholder="Blank: persistent default"><br>
+<p>Blank uses the default; 0 disables this operation's reminder; 5–3600 selects seconds.
+Zero does not bypass a required sensor. Sensor-independent locks have no door reminder.</p>
+<button id="unlock">Sign and unlock</button></fieldset>
+<fieldset><legend>Authorized settings update</legend>
+<label>Default door-open timeout</label><input id="defaultTimeout" type="number" min="5" max="3600" value="90"><br>
+<label>Lock 1 requires Sensor 1</label><input id="lock_1_required" type="checkbox" checked><br>
+<label>Lock 2 requires Sensor 2</label><input id="lock_2_required" type="checkbox" checked><br>
+<p>Uncheck only for deliberate sensor-independent actuation. Alarm monitoring remains
+independent; disable monitoring on unused inputs. All configuration entries describe
+capacity, not required physical connections.</p>
+<span id="sensor_1_row"><label>Sensor 1 monitoring</label><input id="sensor_1" type="checkbox"><br></span>
+<span id="sensor_2_row"><label>Sensor 2 monitoring</label><input id="sensor_2" type="checkbox"><br></span>
+<span id="sensor_3_row"><label>Sensor 3 monitoring</label><input id="sensor_3" type="checkbox"><br></span>
+<span id="sensor_4_row"><label>Sensor 4 monitoring</label><input id="sensor_4" type="checkbox"><br></span>
+<button id="updateConfig">Sign and update</button>
+<p id="configurationState">Read settings to display the effective configuration.</p></fieldset>
+<fieldset><legend>Journal synchronization (development workflow)</legend>
+<p>Received records are held only in browser memory and are <strong>not</strong>
+durably persisted. Export and durably retain the batch before using the explicit
+development acknowledgment. Production TowneCore must store, deduplicate,
+determine the contiguous cursor, sign, and forward the acknowledgment. Reported
+loss ranges must also be durably retained; export includes records and gaps.</p>
+<button id="syncJournal">Retrieve outstanding records</button>
+<button id="exportJournal">Export received records</button>
+<button id="ackJournal">Explicitly sign acknowledgment</button>
+<span id="journalState">No journal records received.</span></fieldset>
+<pre id="log"></pre>
+<script>
+let ws, deviceId, revision, journalRecords=[], journalGaps=[], journalKeys=new Set(), journalCursor=0, journalRetrieving=false;
+const log=x=>{const output=document.querySelector('#log');output.textContent=(output.textContent+`${new Date().toISOString()} ${typeof x==='string'?x:JSON.stringify(x,null,2)}\n`).slice(-64000)};
+const ip=()=>document.querySelector('#ip').value.trim();
+async function helper(path,body){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw Error(j.error||r.status);return j}
+async function readConfiguration(){
+    const r=await fetch(`https://${ip()}/api/v1/config`);
+    if(!r.ok)throw Error(`Configuration read failed: HTTP ${r.status}`);
+    const c=await r.json();
+    if(c.protocol_version!==3||c.schema_version!==4||!Number.isInteger(c.revision)||
+       !c.locks||Object.keys(c.locks).length!==2||
+       ![1,2].every(i=>typeof c.locks[`lock_${i}`]?.sensor_required==='boolean')||
+       !c.sensors||Object.keys(c.sensors).length!==4||
+       ![1,2,3,4].every(i=>typeof c.sensors[`sensor_${i}`]?.monitoring_enabled==='boolean'))
+        throw Error('Device configuration did not contain the canonical two-lock/four-sensor schema');
+    log(c);revision=c.revision;
+    document.querySelector('#defaultTimeout').value=c.default_door_open_timeout_s;
+    for(let i=1;i<=2;i++)document.querySelector(`#lock_${i}_required`).checked=c.locks[`lock_${i}`].sensor_required;
+    for(let i=1;i<=4;i++)document.querySelector(`#sensor_${i}`).checked=c.sensors[`sensor_${i}`].monitoring_enabled;
+    document.querySelector('#configurationState').textContent=`Revision ${revision}; default reminder ${c.default_door_open_timeout_s}s. `+
+        [1,2].map(i=>`Lock ${i}: ${c.locks[`lock_${i}`].sensor_required?'paired sensor required':'sensor-independent'}`).join('; ')+'. '+
+        [1,2,3,4].map(i=>`Sensor ${i} monitoring ${c.sensors[`sensor_${i}`].monitoring_enabled?'on':'off'}`).join('; ');
+    return c;
+}
+const journalRequest=sequence=>{if(!ws||ws.readyState!==WebSocket.OPEN)throw Error('WebSocket is not connected');journalRetrieving=true;ws.send(JSON.stringify({type:'journal_get',protocol_version:1,request_id:crypto.randomUUID(),from_sequence:sequence,limit:8}))};
+const updateJournalState=()=>document.querySelector('#journalState').textContent=`Received ${journalRecords.length} record(s), ${journalGaps.length} loss range(s); covered candidate ${journalCursor}. Not acknowledged.`;
+function acceptJournalBatch(m){
+    for(const record of m.records||[]){
+        const key=`${record.device_id}:${record.sequence}`;
+        if(!journalKeys.has(key)){journalKeys.add(key);journalRecords.push(record)}
+        if(record.sequence===journalCursor+1)journalCursor=record.sequence;
+    }
+    if(m.gap?.exists){
+        const gap={device_id:m.device_id,start_sequence:m.gap.start_sequence,end_sequence:m.gap.end_sequence};
+        if(!journalGaps.some(g=>g.device_id===gap.device_id&&g.start_sequence===gap.start_sequence&&g.end_sequence===gap.end_sequence))journalGaps.push(gap);
+        log(`UNRECOVERABLE JOURNAL GAP ${gap.start_sequence}-${gap.end_sequence}; persist this loss before acknowledgment`);
+        if(gap.start_sequence===journalCursor+1)journalCursor=gap.end_sequence;
+    }
+    updateJournalState();
+    if(m.more)journalRequest(m.next_sequence);else journalRetrieving=false;
+}
+document.querySelector('#connect').onclick=()=>{
+    if(ws&&ws.readyState===WebSocket.OPEN)return;
+    ws=new WebSocket(`wss://${ip()}/api/v1/ws`);
+    ws.onopen=()=>log('WebSocket connected');
+    ws.onclose=()=>{journalRetrieving=false;log('WebSocket closed')};
+    ws.onerror=()=>log('WebSocket error');
+    ws.onmessage=async e=>{
+        const m=JSON.parse(e.data);
+        log(m.type==='journal_batch' ? `Journal batch: ${m.returned_count} records, next ${m.next_sequence}` : m);
+        if(m.device_id&&deviceId&&m.device_id!==deviceId){journalRecords=[];journalGaps=[];journalKeys.clear();journalCursor=0}
+        if(m.device_id)deviceId=m.device_id;
+        if(m.type==='welcome'&&m.journal_sync?.available){
+            journalCursor=m.journal_sync.acknowledged_sequence;
+            updateJournalState();
+            if(m.journal_sync.unsynchronized_records)try{journalRequest(journalCursor+1)}catch(error){log(error.message)}
+        }
+        if(m.type==='journal_batch')acceptJournalBatch(m);
+        if(m.type==='enrollment_challenge')try{
+            const signed=await helper('/api/sign/enrollment',{device_id:m.device_id,challenge:m.challenge,expires_in_s:m.expires_in_s});
+            ws.send(JSON.stringify({type:'enroll_complete',...signed}))
+        }catch(error){log(error.message)}
+    };
+};
+document.querySelector('#disconnect').onclick=()=>ws?.close();
+document.querySelector('#enroll').onclick=()=>ws?.send(JSON.stringify({type:'enroll_begin'}));
+document.querySelector('#unlock').onclick=async()=>{try{if(!deviceId)throw Error('Connect to KeyValet before unlocking');if(!ws||ws.readyState!==WebSocket.OPEN)throw Error('WebSocket is not connected');const request={device_id:deviceId,lock_id:document.querySelector('#lock').value};const timeout=document.querySelector('#unlockTimeout').value.trim();if(timeout!==''){const parsed=Number(timeout);if(!Number.isInteger(parsed)||(parsed!==0&&(parsed<5||parsed>3600)))throw Error('Door-open timeout must be 0 or an integer from 5 to 3600 seconds');request.door_open_timeout_s=parsed}const signed=await helper('/api/sign/unlock',request);const description=!Object.hasOwn(signed,'door_open_timeout_s')?'persistent default timeout':signed.door_open_timeout_s===0?'reminder disabled':signed.door_open_timeout_s+'s timeout';log('Sending signed '+signed.lock_id+' unlock with '+description);ws.send(JSON.stringify(signed))}catch(error){log(error.message)}};
+document.querySelector('#readConfig').onclick=async()=>{try{await readConfiguration()}catch(error){log(error.message)}};
+document.querySelector('#updateConfig').onclick=async()=>{try{if(!deviceId)throw Error('Connect to KeyValet before updating settings');if(!Number.isInteger(revision))throw Error('Read settings before signing an update');const sensors={},locks={};for(let i=1;i<=4;i++){const id=`sensor_${i}`;sensors[id]={monitoring_enabled:document.querySelector(`#${id}`).checked}}for(let i=1;i<=2;i++){const id=`lock_${i}`;locks[id]={sensor_required:document.querySelector(`#${id}_required`).checked}}const config={expected_revision:revision,default_door_open_timeout_s:+document.querySelector('#defaultTimeout').value,locks,sensors};const signed=await helper('/api/sign/config',{device_id:deviceId,config});const r=await fetch(`https://${ip()}/api/v1/config`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(signed)});const result=await r.json();log(result);if(!r.ok||!result.accepted)throw Error(`Configuration update rejected: ${result.code||r.status}`);await readConfiguration()}catch(error){log(error.message)}};
+document.querySelector('#syncJournal').onclick=()=>{try{if(journalRetrieving)throw Error('Journal retrieval is already active');journalRequest(journalCursor+1)}catch(error){log(error.message)}};
+document.querySelector('#exportJournal').onclick=()=>{const blob=new Blob([JSON.stringify({device_id:deviceId,records:journalRecords,gaps:journalGaps},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`keyvalet-journal-${deviceId||'unknown'}-${Date.now()}.json`;a.click();URL.revokeObjectURL(a.href)};
+document.querySelector('#ackJournal').onclick=async()=>{try{if(!deviceId||journalCursor<=0)throw Error('No received cursor is available');if(!ws||ws.readyState!==WebSocket.OPEN)throw Error('WebSocket is not connected');if(!confirm(`Development-only: attest that records AND reported loss ranges through ${journalCursor} are durably persisted?`))return;const signed=await helper('/api/sign/journal-ack',{device_id:deviceId,highest_contiguous_sequence:journalCursor});ws.send(JSON.stringify(signed))}catch(error){log(error.message)}};
+</script>

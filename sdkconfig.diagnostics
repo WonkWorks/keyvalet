@@ -1,0 +1,2 @@
+# Development-only hardware acceptance-test interface.
+CONFIG_KEYVALET_DIAGNOSTICS=y

@@ -1,0 +1,22 @@
+menu "KeyValet configuration"
+
+    config KEYVALET_LOCK_RECOVERY_MS
+        int "Lock recovery interval (ms)"
+        range 100 10000
+        default 2000
+        help
+            Provisional quiet interval after every lock pulse. Requests
+            are rejected during this interval. Bench measurements must validate
+            or revise this value before dual-load operation is accepted.
+
+    config KEYVALET_DIAGNOSTICS
+        bool "Enable development USB hardware-test commands"
+        default n
+        help
+            Enables the deliberately formatted USB Serial/JTAG command
+            interface used for workbench hardware acceptance tests, including
+            guarded finite solenoid pulse commands. Keep this disabled in
+            production firmware. Narrow Improv USB Wi-Fi provisioning is
+            always available and does not depend on this diagnostic option.
+
+endmenu
